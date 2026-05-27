@@ -143,6 +143,16 @@ class _StudioPageState extends State<StudioPage> {
     return frame.image;
   }
 
+  Future<ui.Image?> _pickUiImage() async {
+    final file = await _picker.pickImage(source: ImageSource.gallery);
+    if (file == null) return null;
+
+    final bytes = await file.readAsBytes();
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    return frame.image;
+  }
+
   bool _isSupportedImage(String asset) {
     final path = asset.toLowerCase();
     return path.endsWith('.png') ||
@@ -157,16 +167,52 @@ class _StudioPageState extends State<StudioPage> {
   }
 
   Future<void> _pickImage() async {
-    final file = await _picker.pickImage(source: ImageSource.gallery);
-    if (file == null) return;
+    final image = await _pickUiImage();
+    if (image == null) return;
 
-    final bytes = await file.readAsBytes();
-    final codec = await ui.instantiateImageCodec(bytes);
-    final frame = await codec.getNextFrame();
     setState(() {
-      _artwork = frame.image;
+      _artwork = image;
       _artworkScale = 1;
       _artworkOffset = Offset.zero;
+    });
+  }
+
+  Future<void> _pickSceneImage() async {
+    final image = await _pickUiImage();
+    if (image == null) return;
+
+    final scene = StudioScene(
+      name: 'Cảnh tải lên ${_sceneOptions.length + 1}',
+      wall: const [Color(0xFFF9F7F1), Color(0xFFECE6DC)],
+      floor: const [Color(0xFFD8C7AA), Color(0xFFBFA783)],
+      trim: const Color(0xFFC9BDA8),
+      previewColors: const [Color(0xFFF9F7F1), Color(0xFFD8C7AA)],
+      furniture: Furniture.none,
+      furnitureColor: const Color(0xFF483727),
+      image: image,
+    );
+
+    setState(() {
+      _sceneOptions = [..._sceneOptions, scene];
+      _scene = scene;
+    });
+  }
+
+  Future<void> _pickFrameImage() async {
+    final image = await _pickUiImage();
+    if (image == null) return;
+
+    final frame = FrameStyle(
+      name: 'Khung tải lên ${_frameOptions.length + 1}',
+      base: const Color(0xFF6D4B2F),
+      edge: const Color(0xFF2F1A10),
+      shine: const Color(0xFFE2C08B),
+      texture: image,
+    );
+
+    setState(() {
+      _frameOptions = [..._frameOptions, frame];
+      _frame = frame;
     });
   }
 
@@ -254,6 +300,8 @@ class _StudioPageState extends State<StudioPage> {
       onArtworkOffsetYChanged: (value) => setState(() => _artworkOffset =
           _clampArtworkOffset(Offset(_artworkOffset.dx, value))),
       onArtworkReset: _resetArtworkTransform,
+      onAddScene: _pickSceneImage,
+      onAddFrame: _pickFrameImage,
       scenes: _sceneOptions,
       frames: _frameOptions,
     );
@@ -268,13 +316,67 @@ class _StudioPageState extends State<StudioPage> {
                   SizedBox(width: 360, child: controls),
                 ],
               )
-            : CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(child: _buildWorkspace(compact: true)),
-                  SliverToBoxAdapter(child: controls),
-                ],
-              ),
+            : _buildMobileWorkspace(),
       ),
+    );
+  }
+
+  Widget _buildMobileWorkspace() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          child: _MobileHeader(
+            onPickImage: _pickImage,
+            onExport: _exportPreview,
+          ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: _buildPreview(compact: true),
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 260,
+          child: _MobileControlsPanel(
+            scenes: _sceneOptions,
+            frames: _frameOptions,
+            selectedScene: _scene,
+            selectedFrame: _frame,
+            selectedPaper: _paper,
+            selectedRatio: _ratio,
+            frameWidth: _frameWidth,
+            cornerRadius: _cornerRadius,
+            matWidth: _matWidth,
+            smoothness: _smoothness,
+            shadowDepth: _shadowDepth,
+            artworkScale: _artworkScale,
+            artworkOffset: _artworkOffset,
+            onSceneChanged: (value) => setState(() => _scene = value),
+            onFrameChanged: (value) => setState(() => _frame = value),
+            onPaperChanged: (value) => setState(() => _paper = value),
+            onRatioChanged: (value) => setState(() => _ratio = value),
+            onFrameWidthChanged: (value) => setState(() => _frameWidth = value),
+            onCornerRadiusChanged: (value) =>
+                setState(() => _cornerRadius = value),
+            onMatWidthChanged: (value) => setState(() => _matWidth = value),
+            onSmoothnessChanged: (value) => setState(() => _smoothness = value),
+            onShadowDepthChanged: (value) =>
+                setState(() => _shadowDepth = value),
+            onArtworkScaleChanged: (value) =>
+                setState(() => _artworkScale = value),
+            onArtworkOffsetXChanged: (value) => setState(() => _artworkOffset =
+                _clampArtworkOffset(Offset(value, _artworkOffset.dy))),
+            onArtworkOffsetYChanged: (value) => setState(() => _artworkOffset =
+                _clampArtworkOffset(Offset(_artworkOffset.dx, value))),
+            onArtworkReset: _resetArtworkTransform,
+            onAddScene: _pickSceneImage,
+            onAddFrame: _pickFrameImage,
+          ),
+        ),
+      ],
     );
   }
 
@@ -385,6 +487,43 @@ class _Header extends StatelessWidget {
         Expanded(child: title),
         const SizedBox(width: 18),
         actions,
+      ],
+    );
+  }
+}
+
+class _MobileHeader extends StatelessWidget {
+  const _MobileHeader({required this.onPickImage, required this.onExport});
+
+  final VoidCallback onPickImage;
+  final VoidCallback onExport;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            'FrameIt Studio',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: const Color(0xFF0A5B55),
+                  fontWeight: FontWeight.w900,
+                ),
+          ),
+        ),
+        IconButton.filled(
+          tooltip: 'Tải ảnh',
+          onPressed: onPickImage,
+          icon: const Icon(Icons.add_photo_alternate_outlined),
+        ),
+        const SizedBox(width: 8),
+        IconButton.outlined(
+          tooltip: 'Xuất PNG',
+          onPressed: onExport,
+          icon: const Icon(Icons.ios_share_outlined),
+        ),
       ],
     );
   }
@@ -519,6 +658,8 @@ class _ControlsPanel extends StatelessWidget {
     required this.onArtworkOffsetXChanged,
     required this.onArtworkOffsetYChanged,
     required this.onArtworkReset,
+    required this.onAddScene,
+    required this.onAddFrame,
   });
 
   final bool scrollable;
@@ -548,30 +689,54 @@ class _ControlsPanel extends StatelessWidget {
   final ValueChanged<double> onArtworkOffsetXChanged;
   final ValueChanged<double> onArtworkOffsetYChanged;
   final VoidCallback onArtworkReset;
+  final VoidCallback onAddScene;
+  final VoidCallback onAddFrame;
 
   @override
   Widget build(BuildContext context) {
     final children = [
       _Section(
         title: 'Cảnh trưng bày',
-        child: _OptionGrid<StudioScene>(
-          items: scenes,
-          selected: selectedScene,
-          labelOf: (item) => item.name,
-          colorsOf: (item) => item.previewColors,
-          imageOf: (item) => item.image,
-          onChanged: onSceneChanged,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            OutlinedButton.icon(
+              onPressed: onAddScene,
+              icon: const Icon(Icons.add_photo_alternate_outlined),
+              label: const Text('Tải cảnh'),
+            ),
+            const SizedBox(height: 12),
+            _OptionGrid<StudioScene>(
+              items: scenes,
+              selected: selectedScene,
+              labelOf: (item) => item.name,
+              colorsOf: (item) => item.previewColors,
+              imageOf: (item) => item.image,
+              onChanged: onSceneChanged,
+            ),
+          ],
         ),
       ),
       _Section(
         title: 'Kiểu khung',
-        child: _OptionGrid<FrameStyle>(
-          items: frames,
-          selected: selectedFrame,
-          labelOf: (item) => item.name,
-          colorsOf: (item) => [item.shine, item.base, item.edge],
-          imageOf: (item) => item.texture,
-          onChanged: onFrameChanged,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            OutlinedButton.icon(
+              onPressed: onAddFrame,
+              icon: const Icon(Icons.add_photo_alternate_outlined),
+              label: const Text('Tải khung'),
+            ),
+            const SizedBox(height: 12),
+            _OptionGrid<FrameStyle>(
+              items: frames,
+              selected: selectedFrame,
+              labelOf: (item) => item.name,
+              colorsOf: (item) => [item.shine, item.base, item.edge],
+              imageOf: (item) => item.texture,
+              onChanged: onFrameChanged,
+            ),
+          ],
         ),
       ),
       _Section(
@@ -694,6 +859,286 @@ class _ControlsPanel extends StatelessWidget {
   }
 }
 
+class _MobileControlsPanel extends StatelessWidget {
+  const _MobileControlsPanel({
+    required this.scenes,
+    required this.frames,
+    required this.selectedScene,
+    required this.selectedFrame,
+    required this.selectedPaper,
+    required this.selectedRatio,
+    required this.frameWidth,
+    required this.cornerRadius,
+    required this.matWidth,
+    required this.smoothness,
+    required this.shadowDepth,
+    required this.artworkScale,
+    required this.artworkOffset,
+    required this.onSceneChanged,
+    required this.onFrameChanged,
+    required this.onPaperChanged,
+    required this.onRatioChanged,
+    required this.onFrameWidthChanged,
+    required this.onCornerRadiusChanged,
+    required this.onMatWidthChanged,
+    required this.onSmoothnessChanged,
+    required this.onShadowDepthChanged,
+    required this.onArtworkScaleChanged,
+    required this.onArtworkOffsetXChanged,
+    required this.onArtworkOffsetYChanged,
+    required this.onArtworkReset,
+    required this.onAddScene,
+    required this.onAddFrame,
+  });
+
+  final List<StudioScene> scenes;
+  final List<FrameStyle> frames;
+  final StudioScene selectedScene;
+  final FrameStyle selectedFrame;
+  final Color selectedPaper;
+  final ArtworkRatio selectedRatio;
+  final double frameWidth;
+  final double cornerRadius;
+  final double matWidth;
+  final double smoothness;
+  final double shadowDepth;
+  final double artworkScale;
+  final Offset artworkOffset;
+  final ValueChanged<StudioScene> onSceneChanged;
+  final ValueChanged<FrameStyle> onFrameChanged;
+  final ValueChanged<Color> onPaperChanged;
+  final ValueChanged<ArtworkRatio> onRatioChanged;
+  final ValueChanged<double> onFrameWidthChanged;
+  final ValueChanged<double> onCornerRadiusChanged;
+  final ValueChanged<double> onMatWidthChanged;
+  final ValueChanged<double> onSmoothnessChanged;
+  final ValueChanged<double> onShadowDepthChanged;
+  final ValueChanged<double> onArtworkScaleChanged;
+  final ValueChanged<double> onArtworkOffsetXChanged;
+  final ValueChanged<double> onArtworkOffsetYChanged;
+  final VoidCallback onArtworkReset;
+  final VoidCallback onAddScene;
+  final VoidCallback onAddFrame;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.96),
+      elevation: 10,
+      child: DefaultTabController(
+        length: 5,
+        child: Column(
+          children: [
+            const TabBar(
+              isScrollable: false,
+              labelPadding: EdgeInsets.zero,
+              tabs: [
+                Tab(icon: Icon(Icons.wallpaper_outlined), text: 'Cảnh'),
+                Tab(icon: Icon(Icons.crop_square_outlined), text: 'Khung'),
+                Tab(icon: Icon(Icons.open_with_outlined), text: 'Vị trí'),
+                Tab(icon: Icon(Icons.tune_outlined), text: 'Chỉnh'),
+                Tab(icon: Icon(Icons.palette_outlined), text: 'Giấy'),
+              ],
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+                child: TabBarView(
+                  children: [
+                    Column(
+                      children: [
+                        _AddAssetButton(
+                          label: 'Tải cảnh',
+                          onPressed: onAddScene,
+                        ),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: _OptionStrip<StudioScene>(
+                            items: scenes,
+                            selected: selectedScene,
+                            labelOf: (item) => item.name,
+                            colorsOf: (item) => item.previewColors,
+                            imageOf: (item) => item.image,
+                            onChanged: onSceneChanged,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        _AddAssetButton(
+                          label: 'Tải khung',
+                          onPressed: onAddFrame,
+                        ),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: _OptionStrip<FrameStyle>(
+                            items: frames,
+                            selected: selectedFrame,
+                            labelOf: (item) => item.name,
+                            colorsOf: (item) =>
+                                [item.shine, item.base, item.edge],
+                            imageOf: (item) => item.texture,
+                            onChanged: onFrameChanged,
+                          ),
+                        ),
+                      ],
+                    ),
+                    _MobileSliderPanel(
+                      children: [
+                        _CompactSliderRow(
+                          label: 'Thu phóng',
+                          value: artworkScale,
+                          min: 0.25,
+                          max: 4,
+                          onChanged: onArtworkScaleChanged,
+                        ),
+                        _CompactSliderRow(
+                          label: 'Ngang',
+                          value: artworkOffset.dx,
+                          min: -1.5,
+                          max: 1.5,
+                          onChanged: onArtworkOffsetXChanged,
+                        ),
+                        _CompactSliderRow(
+                          label: 'Dọc',
+                          value: artworkOffset.dy,
+                          min: -1.5,
+                          max: 1.5,
+                          onChanged: onArtworkOffsetYChanged,
+                        ),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: OutlinedButton.icon(
+                            onPressed: onArtworkReset,
+                            icon:
+                                const Icon(Icons.center_focus_strong_outlined),
+                            label: const Text('Đặt lại'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    _MobileSliderPanel(
+                      children: [
+                        _CompactSliderRow(
+                          label: 'Rộng khung',
+                          value: frameWidth,
+                          min: 18,
+                          max: 110,
+                          onChanged: onFrameWidthChanged,
+                        ),
+                        _CompactSliderRow(
+                          label: 'Bo viền',
+                          value: cornerRadius,
+                          min: 0,
+                          max: 44,
+                          onChanged: onCornerRadiusChanged,
+                        ),
+                        _CompactSliderRow(
+                          label: 'Viền giấy',
+                          value: matWidth,
+                          min: 0,
+                          max: 150,
+                          onChanged: onMatWidthChanged,
+                        ),
+                        _CompactSliderRow(
+                          label: 'Khử nhăn',
+                          value: smoothness,
+                          min: 0,
+                          max: 100,
+                          onChanged: onSmoothnessChanged,
+                        ),
+                        _CompactSliderRow(
+                          label: 'Bóng',
+                          value: shadowDepth,
+                          min: 0,
+                          max: 100,
+                          onChanged: onShadowDepthChanged,
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            for (final paper in papers)
+                              _ColorSwatch(
+                                color: paper,
+                                selected: paper == selectedPaper,
+                                onTap: () => onPaperChanged(paper),
+                              ),
+                          ],
+                        ),
+                        const Spacer(),
+                        SegmentedButton<ArtworkRatio>(
+                          segments: const [
+                            ButtonSegment(
+                              value: ArtworkRatio.portrait,
+                              label: Text('Dọc'),
+                            ),
+                            ButtonSegment(
+                              value: ArtworkRatio.square,
+                              label: Text('Vuông'),
+                            ),
+                            ButtonSegment(
+                              value: ArtworkRatio.landscape,
+                              label: Text('Ngang'),
+                            ),
+                          ],
+                          selected: {selectedRatio},
+                          onSelectionChanged: (value) =>
+                              onRatioChanged(value.first),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileSliderPanel extends StatelessWidget {
+  const _MobileSliderPanel({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: children,
+    );
+  }
+}
+
+class _AddAssetButton extends StatelessWidget {
+  const _AddAssetButton({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 36,
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
+        label: Text(label),
+      ),
+    );
+  }
+}
+
 class _Section extends StatelessWidget {
   const _Section({required this.title, required this.child});
 
@@ -758,6 +1203,46 @@ class _OptionGrid<T> extends StatelessWidget {
             onTap: () => onChanged(item),
           ),
       ],
+    );
+  }
+}
+
+class _OptionStrip<T> extends StatelessWidget {
+  const _OptionStrip({
+    required this.items,
+    required this.selected,
+    required this.labelOf,
+    required this.colorsOf,
+    required this.imageOf,
+    required this.onChanged,
+  });
+
+  final List<T> items;
+  final T selected;
+  final String Function(T item) labelOf;
+  final List<Color> Function(T item) colorsOf;
+  final ui.Image? Function(T item) imageOf;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: items.length,
+      separatorBuilder: (context, index) => const SizedBox(width: 10),
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return SizedBox(
+          width: 96,
+          child: _OptionTile(
+            selected: item == selected,
+            label: labelOf(item),
+            colors: colorsOf(item),
+            image: imageOf(item),
+            onTap: () => onChanged(item),
+          ),
+        );
+      },
     );
   }
 }
@@ -867,6 +1352,54 @@ class _SliderRow extends StatelessWidget {
               style: const TextStyle(
                   color: Color(0xFF626B73), fontWeight: FontWeight.w700)),
           Slider(value: value, min: min, max: max, onChanged: onChanged),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactSliderRow extends StatelessWidget {
+  const _CompactSliderRow({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.onChanged,
+  });
+
+  final String label;
+  final double value;
+  final double min;
+  final double max;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 34,
+      child: Row(
+        children: [
+          SizedBox(
+            width: 86,
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFF626B73),
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Slider(
+              value: value,
+              min: min,
+              max: max,
+              onChanged: onChanged,
+            ),
+          ),
         ],
       ),
     );
@@ -1103,8 +1636,10 @@ class FramePreviewPainter extends CustomPainter {
   }
 
   void _drawFramePackage(Canvas canvas, Rect art) {
-    final outer = art.inflate(frameWidth + matWidth);
-    final mat = art.inflate(matWidth);
+    final effectiveFrameWidth = compact ? frameWidth * 0.58 : frameWidth;
+    final effectiveMatWidth = compact ? matWidth * 0.68 : matWidth;
+    final outer = art.inflate(effectiveFrameWidth + effectiveMatWidth);
+    final mat = art.inflate(effectiveMatWidth);
     final shadow = shadowDepth / 100;
 
     canvas.drawShadow(

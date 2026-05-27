@@ -6,6 +6,7 @@ build/
 pubspec.lock
 
 android/.gradle/
+android/.kotlin/
 android/app/build/
 ios/Pods/
 ios/Flutter/Flutter.framework
