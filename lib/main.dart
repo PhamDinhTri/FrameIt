@@ -288,8 +288,8 @@ class _StudioPageState extends State<StudioPage> {
           const SizedBox(height: 20),
           if (compact)
             SizedBox(
-              height: MediaQuery.sizeOf(context).height * 0.56,
-              child: _buildPreview(),
+              height: _compactPreviewHeight(context),
+              child: _buildPreview(compact: true),
             )
           else
             Expanded(child: _buildPreview()),
@@ -298,7 +298,12 @@ class _StudioPageState extends State<StudioPage> {
     );
   }
 
-  Widget _buildPreview() {
+  double _compactPreviewHeight(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    return (size.height * 0.62).clamp(420.0, 620.0);
+  }
+
+  Widget _buildPreview({bool compact = false}) {
     return _PreviewSurface(
       previewKey: _previewKey,
       scene: _scene,
@@ -313,6 +318,7 @@ class _StudioPageState extends State<StudioPage> {
       shadowDepth: _shadowDepth,
       artworkScale: _artworkScale,
       artworkOffset: _artworkOffset,
+      compact: compact,
       onArtworkScaleStart: _startArtworkInteraction,
       onArtworkScaleUpdate: _updateArtworkInteraction,
     );
@@ -399,6 +405,7 @@ class _PreviewSurface extends StatelessWidget {
     required this.shadowDepth,
     required this.artworkScale,
     required this.artworkOffset,
+    required this.compact,
     required this.onArtworkScaleStart,
     required this.onArtworkScaleUpdate,
   });
@@ -416,6 +423,7 @@ class _PreviewSurface extends StatelessWidget {
   final double shadowDepth;
   final double artworkScale;
   final Offset artworkOffset;
+  final bool compact;
   final ValueChanged<ScaleStartDetails> onArtworkScaleStart;
   final void Function(ScaleUpdateDetails details, Size previewSize)
       onArtworkScaleUpdate;
@@ -440,8 +448,9 @@ class _PreviewSurface extends StatelessWidget {
           builder: (context, constraints) {
             final maxWidth = constraints.maxWidth;
             final maxHeight = constraints.maxHeight;
-            final previewWidth = math.min(maxWidth, maxHeight * 1.5);
-            final previewHeight = previewWidth / 1.5;
+            final targetAspect = compact ? 0.78 : 1.5;
+            final previewWidth = math.min(maxWidth, maxHeight * targetAspect);
+            final previewHeight = previewWidth / targetAspect;
 
             return SizedBox(
               width: previewWidth,
@@ -467,6 +476,7 @@ class _PreviewSurface extends StatelessWidget {
                       shadowDepth: shadowDepth,
                       artworkScale: artworkScale,
                       artworkOffset: artworkOffset,
+                      compact: compact,
                     ),
                     child: const SizedBox.expand(),
                   ),
@@ -907,6 +917,7 @@ class FramePreviewPainter extends CustomPainter {
     required this.shadowDepth,
     required this.artworkScale,
     required this.artworkOffset,
+    required this.compact,
   });
 
   final StudioScene scene;
@@ -921,6 +932,7 @@ class FramePreviewPainter extends CustomPainter {
   final double shadowDepth;
   final double artworkScale;
   final Offset artworkOffset;
+  final bool compact;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1077,16 +1089,17 @@ class FramePreviewPainter extends CustomPainter {
     };
     final aspect =
         artwork == null ? fallbackAspect : artwork!.width / artwork!.height;
-    final maxW = size.width * 0.4;
-    final maxH = size.height * 0.47;
+    final maxW = size.width * (compact ? 0.52 : 0.4);
+    final maxH = size.height * (compact ? 0.34 : 0.47);
     var artW = maxW;
     var artH = artW / aspect;
     if (artH > maxH) {
       artH = maxH;
       artW = artH * aspect;
     }
+    final centerY = compact ? size.height * 0.38 : size.height * 0.33;
     return Rect.fromLTWH(
-        size.width * 0.5 - artW / 2, size.height * 0.33 - artH / 2, artW, artH);
+        size.width * 0.5 - artW / 2, centerY - artH / 2, artW, artH);
   }
 
   void _drawFramePackage(Canvas canvas, Rect art) {
@@ -1265,7 +1278,8 @@ class FramePreviewPainter extends CustomPainter {
         oldDelegate.smoothness != smoothness ||
         oldDelegate.shadowDepth != shadowDepth ||
         oldDelegate.artworkScale != artworkScale ||
-        oldDelegate.artworkOffset != artworkOffset;
+        oldDelegate.artworkOffset != artworkOffset ||
+        oldDelegate.compact != compact;
   }
 }
 
