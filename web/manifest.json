@@ -1,0 +1,10 @@
+{
+  "name": "FrameIt Studio",
+  "short_name": "FrameIt",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#EBE7DF",
+  "theme_color": "#0F766E",
+  "description": "Preview framed artwork on mobile and web.",
+  "orientation": "portrait-primary"
+}

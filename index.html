@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FrameIt Studio</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">FrameIt Studio</p>
+            <h1>Đóng khung và xem tác phẩm trong không gian thật</h1>
+          </div>
+          <div class="actions">
+            <label class="primary-action">
+              <input id="imageInput" type="file" accept="image/*" />
+              <span>Tải ảnh</span>
+            </label>
+            <button id="downloadBtn" type="button">Xuất PNG</button>
+          </div>
+        </header>
+
+        <div class="canvas-stage">
+          <canvas id="previewCanvas" width="1440" height="960" aria-label="Bản xem trước tác phẩm đã đóng khung"></canvas>
+        </div>
+      </section>
+
+      <aside class="control-panel">
+        <section class="panel-section">
+          <h2>Cảnh trưng bày</h2>
+          <div class="scene-grid" id="sceneOptions"></div>
+        </section>
+
+        <section class="panel-section">
+          <h2>Kiểu khung</h2>
+          <div class="frame-grid" id="frameOptions"></div>
+        </section>
+
+        <section class="panel-section">
+          <h2>Tinh chỉnh</h2>
+          <label class="slider-row">
+            <span>Độ rộng khung</span>
+            <input id="frameWidth" type="range" min="18" max="110" value="56" />
+          </label>
+          <label class="slider-row">
+            <span>Bo viền</span>
+            <input id="cornerRadius" type="range" min="0" max="44" value="8" />
+          </label>
+          <label class="slider-row">
+            <span>Viền giấy</span>
+            <input id="matWidth" type="range" min="0" max="150" value="54" />
+          </label>
+          <label class="slider-row">
+            <span>Khử nhăn</span>
+            <input id="smoothness" type="range" min="0" max="100" value="22" />
+          </label>
+          <label class="slider-row">
+            <span>Bóng đổ</span>
+            <input id="shadowDepth" type="range" min="0" max="100" value="58" />
+          </label>
+        </section>
+
+        <section class="panel-section">
+          <h2>Màu giấy</h2>
+          <div class="swatches" id="paperOptions"></div>
+        </section>
+
+        <section class="panel-section">
+          <h2>Tỷ lệ tác phẩm</h2>
+          <div class="segmented" role="group" aria-label="Tỷ lệ tác phẩm">
+            <button class="ratio active" data-ratio="portrait" type="button">Dọc</button>
+            <button class="ratio" data-ratio="square" type="button">Vuông</button>
+            <button class="ratio" data-ratio="landscape" type="button">Ngang</button>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
