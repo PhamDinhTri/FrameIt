@@ -51,9 +51,9 @@ class _StudioPageState extends State<StudioPage> {
   ArtworkRatio _ratio = ArtworkRatio.portrait;
   ui.Image? _artwork;
 
-  double _frameWidth = 56;
+  double _frameWidth = 28;
   double _cornerRadius = 8;
-  double _matWidth = 54;
+  double _matWidth = 24;
   double _smoothness = 22;
   double _shadowDepth = 58;
   double _artworkScale = 1;
@@ -1023,8 +1023,8 @@ class _MobileControlsPanel extends StatelessWidget {
                         _CompactSliderRow(
                           label: 'Rộng khung',
                           value: frameWidth,
-                          min: 18,
-                          max: 110,
+                          min: 6,
+                          max: 70,
                           onChanged: onFrameWidthChanged,
                         ),
                         _CompactSliderRow(
@@ -1038,7 +1038,7 @@ class _MobileControlsPanel extends StatelessWidget {
                           label: 'Viền giấy',
                           value: matWidth,
                           min: 0,
-                          max: 150,
+                          max: 90,
                           onChanged: onMatWidthChanged,
                         ),
                         _CompactSliderRow(
@@ -1636,8 +1636,8 @@ class FramePreviewPainter extends CustomPainter {
   }
 
   void _drawFramePackage(Canvas canvas, Rect art) {
-    final effectiveFrameWidth = compact ? frameWidth * 0.58 : frameWidth;
-    final effectiveMatWidth = compact ? matWidth * 0.68 : matWidth;
+    final effectiveFrameWidth = compact ? frameWidth * 0.28 : frameWidth;
+    final effectiveMatWidth = compact ? matWidth * 0.36 : matWidth;
     final outer = art.inflate(effectiveFrameWidth + effectiveMatWidth);
     final mat = art.inflate(effectiveMatWidth);
     final shadow = shadowDepth / 100;
